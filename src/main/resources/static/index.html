@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Blackboard</title>
+
+    <!-- P5.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+
+    <!-- React + ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+
+<body>
+<div id="root"></div>
+
+<!-- React Component + P5.js Integration -->
+<script type="text/babel">
+
+    function App() {
+        const [messages, setMessages] = React.useState([]);
+        const wsRef = React.useRef(null);
+
+        React.useEffect(() => {
+            // Conexión al backend WebSocket
+            const ws = new WebSocket("ws://localhost:8080/blackboard");
+            wsRef.current = ws;
+
+            ws.onopen = () => console.log("✅ Connected to WebSocket");
+            ws.onmessage = (msg) => {
+                console.log("📩 Message from server:", msg.data);
+                setMessages((prev) => [...prev, msg.data]);
+            };
+            ws.onerror = (err) => console.error("❌ WebSocket error:", err);
+            ws.onclose = () => console.log("❎ WebSocket closed");
+
+            return () => ws.close();
+        }, []);
+
+        React.useEffect(() => {
+            // P5.js sketch
+            new p5((p) => {
+                p.setup = () => {
+                    const canvas = p.createCanvas(800, 500);
+                    canvas.parent("root");
+                    p.background(255);
+                };
+
+                p.mouseDragged = () => {
+                    p.fill(0);
+                    p.noStroke();
+                    p.circle(p.mouseX, p.mouseY, 8);
+
+                    // Enviar coordenadas al backend
+                    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({
+                            x: p.mouseX,
+                            y: p.mouseY
+                        }));
+                    }
+                };
+            });
+        }, []);
+
+        return (
+            <div style={{ padding: "1rem" }}>
+                <h2>🖊️ Interactive Blackboard</h2>
+                <p>Drag your mouse to draw on the board. Changes are sent via WebSocket.</p>
+                <div>
+                    <h4>Messages received:</h4>
+                    <ul>
+                        {messages.map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                </div>
+            </div>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+
+</body>
+</html>
