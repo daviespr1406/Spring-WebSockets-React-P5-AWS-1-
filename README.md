@@ -2,7 +2,6 @@
 
 **Autores:**  
 - David Espinosa  
-- Emily Noreña  
 
 **Curso:** ARSW — Escuela Colombiana de Ingeniería Julio Garavito  
 **Fecha:** Octubre 2025  
